@@ -1,5 +1,8 @@
 package main.java;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,10 +12,11 @@ import java.util.Scanner;
 
 /**
  * Class to handle the Fuzzy Duck game logic.
+ * 
  * @author Sarah.Johnston
  *
  */
-	public class FuzzyDuck {
+public class FuzzyDuck {
 
 	/**
 	 * Acceptable user input values.
@@ -21,53 +25,68 @@ import java.util.Scanner;
 			"does he?", "he does!", "go" };
 
 	/**
-	 * The main Fuzzy Duck runner (possibly obsolete now).
-	 * @param args Arguments.
+	 * Amount of time to go to sleep for.
 	 */
-	public static void main(final String... args) {
+	private static final int SLEEPYTIME = 200;
 
-		Scanner input = new Scanner(System.in, "UTF-8");
-		System.out.println("Enter 'start' to start the game.");
-
-		startGame(input);
-		playFuzzyDuck(input);
-
-		input.close();
+	private static String lastValue;
+	private static String lastFuzzyDuck;
+	private static boolean firstValue = true;
+	private List<String> validInputs = new ArrayList<String>();
+	
+	public FuzzyDuck() {
+		
 	}
 	
-	//maybe we should be inputting a list of writers? or something along those lines.
-	// actually just make it so it always writes & reads own server
-
 	/**
-	 * Start the Fuzzy Duck game.
-	 * @param input Scanner for console user input.
+	 * The main Fuzzy Duck runner.
+	 * 
+	 * @param args Arguments.
+	 * @throws IOException Might throw one of these. 
+	 * @throws InterruptedException Might throw one of these.
 	 */
-	public static void startGame(final Scanner input) {
-		boolean running = true;
+	public static void main(final String... args)
+			throws InterruptedException, IOException {
 
-		while (running) {
-			String value = input.nextLine();
-			if (value.toLowerCase(Locale.ENGLISH).equals("start")) {
-				System.out
-						.println("Suggested input: " + suggestStartingValue());
-				running = false;
+		FuzzyDuck fd = new FuzzyDuck();
+		try (Scanner input = new Scanner(System.in, "UTF-8")) {
+			System.out.println("Enter 'start' to start the game.");
+			
+			String value = input.nextLine().toLowerCase(Locale.ENGLISH);
+			if (value.equals("start")) {
+				
+				List<BufferedWriter> writers = new ArrayList<BufferedWriter>();
+				
+				writers.add(new BufferedWriter(
+						new OutputStreamWriter(System.out, "UTF-8")));
+
+				fd.writeToAll("Suggested input: " 
+						+ fd.suggestStartingValue(), writers);
+				
+				while (true) {
+					value = input.nextLine().toLowerCase(Locale.ENGLISH);
+					fd.playFuzzyDuck(input, writers);
+				}
+
 			} else {
 				System.out.println("Enter 'start' to start the game.");
 			}
 		}
+		
 	}
 
 	/**
 	 * Play Fuzzy Duck. Checks for acceptable user input.
 	 * Suggests valid values with the 'go' command.
 	 * @param input Scanner for console user input.
+	 * @param writers Places to write to.
+	 * @throws InterruptedException 
+	 * @throws IOException 
 	 */
-	public static void playFuzzyDuck(final Scanner input) {
-		String lastFuzzyDuck = null;
+	public void playFuzzyDuck(final Scanner input, 
+			final List<BufferedWriter> writers) 
+					throws IOException, InterruptedException {
 		String value = null;
-		String lastValue = null;
-		List<String> validInputs = null;
-		boolean firstValue = true;
 
 		while (true) {
 			value = input.nextLine().toLowerCase(Locale.ENGLISH);
@@ -75,43 +94,74 @@ import java.util.Scanner;
 			// check that we've got an acceptable input
 			if (Arrays.asList(acceptedInputs).contains(value)) {
 
-				// implement suggestions
+				// implement suggestions (actually we probably only want to write to console here!)
 				if (value.equals("go")) {
 					if (firstValue) {
-						System.out.println(
-								"Suggested input: " + suggestStartingValue());
+						writeToAll("Suggested input: " 
+								+ suggestStartingValue(), writers);
 					} else {
-						System.out.println("Suggested input: "
-								+ suggestNextValue(lastValue, lastFuzzyDuck));
+						writeToAll("Suggested input: " + suggestNextValue(), 
+								writers);
 					}
 				}
 
-				// now check that we're following the game rules
-				if (value.equals("fuzzy duck") || value.equals("ducky fuzz")) {
-					if (firstValue || validInputs.contains(value)) {
-						lastFuzzyDuck = value;
-						lastValue = value;
-						firstValue = false;
-						validInputs = nextValidValues(value, lastFuzzyDuck);
-					} else {
-						System.out.println("Invalid input (try again)");
-					}
+				// Handle user input 
+				if (firstValue) {
+					handleFirstValue(value, writers);
+				} else {
+					handleInputValue(value, writers);
 				}
 			} else {
-				System.out.println(
-						"Accepted inputs: " + Arrays.toString(acceptedInputs));
+				writeToAll("Accepted inputs: " 
+						+ Arrays.toString(acceptedInputs), writers);
 			}
+		}
+	}
+	
+	/**
+	 * Play Fuzzy Duck. Checks for acceptable user input.
+	 * Suggests valid values with the 'go' command.
+	 * @param input Scanner for console user input.
+	 * @param writers Places to write to.
+	 * @throws InterruptedException 
+	 * @throws IOException 
+	 */
+	public void playGame(final String input, 
+			final List<BufferedWriter> writers) 
+					throws IOException, InterruptedException {
+		// check that we've got an acceptable input
+		if (Arrays.asList(acceptedInputs).contains(input)) {
+
+		// implement suggestions (actually we probably only want to write to console here!)
+			if (input.equals("go")) {
+				if (firstValue) {
+					writeToAll("Suggested input: " 
+							+ suggestStartingValue(), writers);
+				} else {
+					writeToAll("Suggested input: " + suggestNextValue(), 
+							writers);
+				}
+			}
+			// Handle user input 
+			if (firstValue) {
+				handleFirstValue(input, writers);
+			} else {
+				handleInputValue(input, writers);
+			}
+		} else {
+			writeToAll("Accepted inputs: " 
+					+ Arrays.toString(acceptedInputs), writers);
 		}
 	}
 
 	/**
 	 * Calculate the values that are valid for the next round of user input.
-	 * @param input String input for this round.
-	 * @param lastFuzzyDuck The last Fuzzy Duck/Ducky Fuzz value used.
+	 * 
+	 * @param input
+	 *            String input for this round.
 	 * @return List of valid values (Strings).
 	 */
-	public static List<String> nextValidValues(final String input,
-			final String lastFuzzyDuck) {
+	public List<String> nextValidValues(final String input) {
 		List<String> values = new ArrayList<String>();
 
 		if (input.equals("fuzzy duck") || input.equals("ducky fuzz")) {
@@ -131,16 +181,16 @@ import java.util.Scanner;
 		if (input.equals("he does!")) {
 			values.add(lastFuzzyDuck);
 		}
-
 		return values;
 	}
 
 	/**
-	 * Suggests a value to start the game with (either Fuzzy Duck or 
-	 * Ducky Fuzz).
+	 * Suggests a value to start the game with (either Fuzzy Duck or Ducky
+	 * Fuzz).
+	 * 
 	 * @return String suggestion.
 	 */
-	public static String suggestStartingValue() {
+	public String suggestStartingValue() {
 		Random randomNum = new Random();
 		int result = randomNum.nextInt(2);
 		if (result == 1) {
@@ -152,14 +202,12 @@ import java.util.Scanner;
 
 	/**
 	 * Suggests a valid value that the user could input next.
-	 * @param input String user input.
-	 * @param lastFuzzyDuck String the last fuzzy duck/ducky fuzz value.
+	 * 
 	 * @return Suggestion for the next value (String).
 	 */
-	public static String suggestNextValue(final String input, 
-			final String lastFuzzyDuck) {
+	public String suggestNextValue() {
 
-		List<String> options = nextValidValues(input, lastFuzzyDuck);
+		List<String> options = nextValidValues(lastValue);
 
 		// make it more likely to get one of these!
 		if (options.contains("fuzzy duck")) {
@@ -175,4 +223,71 @@ import java.util.Scanner;
 		return options.get(index);
 	}
 
+	/**
+	 * Handle the first user input value.
+	 * @param value Input value.
+	 * @param writers Places to write to.
+	 * @return True if the value was valid, false otherwise.
+	 * @throws IOException Might throw this.
+	 * @throws InterruptedException Might throw this.
+	 */
+	public boolean handleFirstValue(
+			final String value, final List<BufferedWriter> writers)
+					throws IOException, InterruptedException {
+		if (value.equals("fuzzy duck") 
+				|| value.equals("ducky fuzz")) {
+		lastFuzzyDuck = value;
+		lastValue = value;
+		firstValue = false;
+		validInputs = nextValidValues(value);
+		return true;
+		} else {
+			writeToAll("Your first input must be 'fuzzy duck'"
+					+ "or 'ducky fuzz'", writers);
+			return false;
+		}
+	}
+	
+	/**
+	 * Handle all other user input.
+	 * @param value Input value.
+	 * @param writers places to write to.
+	 * @return True if input valid, false otherwise.
+	 * @throws IOException Might throw this.
+	 * @throws InterruptedException Might throw this.
+	 */
+	public boolean handleInputValue(
+			final String value,	final List<BufferedWriter> writers) 
+					throws IOException, InterruptedException {
+		if (validInputs.contains(value)) {						
+			if (value.equals("fuzzy duck") 
+					|| value.equals("ducky fuzz")) {
+				lastFuzzyDuck = value;
+				lastValue = value;
+			}
+			validInputs = nextValidValues(value);
+			return true;
+		} else {
+			writeToAll("Invalid input (try again)", writers);
+			return false;
+		}
+	}
+	
+	/**
+	 * Write out some stuff to all the writers.
+	 * @param value Thing to write.
+	 * @param writers things to write to.
+	 * @throws IOException Might throw this.
+	 * @throws InterruptedException Might throw this.
+	 */
+	public void writeToAll(final String value,
+			final List<BufferedWriter> writers)
+			throws IOException, InterruptedException {
+		for (BufferedWriter writer : writers) {
+			writer.write(value);
+			writer.newLine();
+			writer.flush();
+			Thread.sleep(SLEEPYTIME);
+		}
+	}
 }

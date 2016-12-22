@@ -29,6 +29,8 @@ public final class Connection {
 	 */
 	private static final int SLEEPYTIME = 200;
 	
+	private static boolean gameRunning = false;
+	
 	/**
 	 * Main method for the Connection class.
 	 * @param args arguments 
@@ -36,10 +38,11 @@ public final class Connection {
 	 */
 	public static void main(final String[] args) throws IOException {
 
-		System.out.println("Let's play a game! "
-				+ "To start multiplayer mode, enter 'multi <port>'. "
+		System.out.println("Let's play a game!\n"
+				+ "To start multiplayer mode, enter 'multi <port>'.\n"
 				+ "Then, to connect to another instance of Fuzzy Duck, enter "
-				+ "'connect <IP> <port>'.");
+				+ "'connect <IP> <port>'.\n"
+				+ "To play Fuzzy Duck, enter 'start'.");
 		Connection st = new Connection();
 		st.startSender();
 	}
@@ -53,6 +56,7 @@ public final class Connection {
 	 * Start the game client (allow it to send messages out).
 	 */
 	public void startSender() {
+		FuzzyDuck fd = new FuzzyDuck();
 		try {
 			writers.add(new BufferedWriter(
 					new OutputStreamWriter(System.out, "UTF-8")));
@@ -66,7 +70,7 @@ public final class Connection {
 					while (true) {
 						String value = 
 								input.nextLine().toLowerCase(Locale.ENGLISH);
-						handleInput(value);
+						handleInput(value, fd);
 					}
 				} catch (UnknownHostException e) {
 					e.printStackTrace();
@@ -82,15 +86,17 @@ public final class Connection {
 	/**
 	 * Handle user input.
 	 * @param value User input value (String).
+	 * @param fd Fuzzy Duck
 	 * @throws IOException Might throw an IOException
 	 * @throws InterruptedException Might throw an InterruptedException.
 	 */
-	private synchronized void handleInput(final String value)
+	private synchronized void handleInput(
+			final String value, final FuzzyDuck fd)
 			throws IOException, InterruptedException {
 		String[] values = value.split("\\s+");
 
 		if (values[0].equals("multi") && values.length == 2) {
-			startServer(Integer.parseInt(values[1]));
+			startServer(Integer.parseInt(values[1]), fd);
 		} else
 		// check to see if we're adding a new connection
 		if (values[0].equals("connect") 
@@ -98,13 +104,18 @@ public final class Connection {
 			// if we are then connect
 			writers.add(
 					connectToPlayer(values[1], Integer.parseInt(values[2])));
-		} else {
-			// now write to everywhere we know about
-			for (BufferedWriter writer : writers) {
-				writer.write(value);
-				writer.newLine();
-				writer.flush();
-				Thread.sleep(SLEEPYTIME);
+		} else 
+		if (values[0].equals("start")) {
+			fd.writeToAll("Suggested input: " 
+					+ fd.suggestStartingValue(), writers);
+			gameRunning = true;
+		}
+		else {
+			if (gameRunning) {
+			fd.playGame(value, writers);
+			} else {
+				fd.writeToAll(
+						"Enter start to start a game of Fuzzy Duck!", writers);
 			}
 		}
 	}
@@ -112,8 +123,9 @@ public final class Connection {
 	/**
 	 * Start the server (for receiving messages from game clients).
 	 * @param port The port on which to start the server.
+	 * @param fd Fuzzy Duck
 	 */
-	public void startServer(final int port) {
+	public void startServer(final int port, final FuzzyDuck fd) {
 		(new Thread() {
 			@Override
 			public void run() {
@@ -133,7 +145,7 @@ public final class Connection {
 
 									String line = null;
 									while ((line = in.readLine()) != null) {
-										handleInput(line);
+										handleInput(line, fd);
 									}
 								} catch (IOException e) {
 									e.printStackTrace();
