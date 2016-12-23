@@ -109,8 +109,7 @@ public final class Connection {
 			fd.writeToAll("Suggested input: " 
 					+ fd.suggestStartingValue(), writers);
 			gameRunning = true;
-		}
-		else {
+		} else {
 			if (gameRunning) {
 			fd.playGame(value, writers);
 			} else {

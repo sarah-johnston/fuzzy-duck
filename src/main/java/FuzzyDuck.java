@@ -34,8 +34,29 @@ public class FuzzyDuck {
 	private static boolean firstValue = true;
 	private List<String> validInputs = new ArrayList<String>();
 	
+	/**
+	 * FuzzyDuck constructor.
+	 */
 	public FuzzyDuck() {
 		
+	}
+	
+	/**
+	 * Added this in for unit tests (probably a terrible way to do it).
+	 * @param value Last fuzzy duck value.
+	 */
+	public FuzzyDuck(final String value) {
+		FuzzyDuck.lastFuzzyDuck = value;
+	}
+	
+	/**
+	 * Added this in for unit tests (probably a terrible way to do it).
+	 * @param value Last fuzzy duck value.
+	 * @param last Last value.
+	 */
+	public FuzzyDuck(final String value, final String last) {
+		FuzzyDuck.lastFuzzyDuck = value;
+		FuzzyDuck.lastValue = last;
 	}
 	
 	/**
